@@ -1,0 +1,49 @@
+
+#container {
+    position: absolute; 
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+}
+
+body {
+	margin: 0;
+	/*background-color: #bfd1e5;
+	font-family: Monospace;
+	font-size: 13px;
+	line-height: 24px;*/
+	overscroll-behavior: none;
+}
+
+#info > a {
+	color: #d400ff;
+	text-decoration: none;
+}
+
+#info > a:hover {
+	text-decoration: underline;
+}
+
+#info {
+  color: #0099ff;
+	position: absolute;
+	top: 0px;
+	width: 100%;
+	padding: 10px;
+	box-sizing: border-box;
+	text-align: center;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	pointer-events: none;
+	z-index: 1;
+}
+
+#info > a,
+#info > button,
+#info > input,
+#info > select {
+	pointer-events: auto;
+}

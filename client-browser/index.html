@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<title>three.js webgl - geometry - minecraft</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="./style.css">
+	<style></style>
+</head>
+
+<body>
+
+	<div id="container">
+		<!--
+		<canvas id="main-screen" style="display: block;" ></canvas>
+		<div id="main-stats" style="position: fixed; top: 0px; left: 0px; cursor: pointer; opacity: 0.9; z-index: 10000;">
+			<canvas style="display: block;"></canvas>
+		</div>
+	-->
+	</div>
+	<div id="info">
+		<a href="https://threejs.org/" target="_blank" rel="noopener">three.js</a> -
+		<a href="http://www.minecraft.net/" target="_blank" rel="noopener">minecraft</a> demo. featuring
+		<a href="http://painterlypack.net/" target="_blank" rel="noopener">painterly pack</a><br />
+		(left click: forward, right click: backward)
+	</div>
+
+	<script type="importmap">
+		{
+			"imports": {
+				"three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+				"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+				"vrf/":"./classpath/vrf/"
+			}
+		}
+	</script>
+
+	<script type="module">
+		import * as vrf from "vrf/index.js";
+
+		let client = new vrf.MainDesktopGeneric();
+
+		window.vrfobj = client;
+
+		client.init({
+			container:document.getElementById("container")
+		});
+		
+		// try webxr
+		(async()=>{
+			const has_webxr=await vrf.envHasWebXR();
+			if(!has_webxr){
+				return;
+			}
+			const try1=await client.tryInitWebXR();
+			if(try1){
+				return;
+			}
+			const try2=await client.tryInitWebXR();
+			if(try2){
+				return;
+			}
+			console.error("webxr seems support but unable to launch");
+		})();
+
+	</script>
+
+
+
+</body>
+
+</html>
