@@ -1,5 +1,5 @@
 
-export default class EventEmitter {
+export default class SyncEventEmitter {
     events = {};// string => function[]
     constructor() {
         this.on = this.on.bind(this);

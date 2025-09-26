@@ -8,11 +8,11 @@ export async function envHasWebXR() {
 };
 
 export function is_i32(n) {
-    return ((typeof n == "bigint") || (Number.isInteger(n))) && n >= -2147483648 && n <= 2147483647;
+    return ((typeof n == "bigint") || (Number.isSafeInteger(n))) && n >= -2147483648 && n <= 2147483647;
 };
 
 export function is_u32(n) {
-    return ((typeof n == "bigint") || (Number.isInteger(n))) && n >= 0 && n <= 0xFFFFFFFF;
+    return ((typeof n == "bigint") || (Number.isSafeInteger(n))) && n >= 0 && n <= 0xFFFFFFFF;
 };
 
 export const i64_min = -9223372036854775808n;

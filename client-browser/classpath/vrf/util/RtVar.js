@@ -1,9 +1,9 @@
-import EventEmitter from "./EventEmitter.js";
+import SyncEventEmitter from "./SyncEventEmitter.js";
 
 
 export default class RtVar {
     #value = undefined;// T
-    #listener = new EventEmitter();
+    #listener = new SyncEventEmitter();
 
     onListen = undefined;
     offListen = undefined;
