@@ -2,14 +2,18 @@
 import RtVar from "./RtVar.js";
 
 export default class RtVars {
-
     /**
-     * Map<string, RtVar>
+     * [ string => RtVar ]
      */
-    #rtVars = new Map();
+    /** @type {Map<string,RtVar>} */
+    #values = new Map();
+
+    get values() {
+        return this.#values;
+    };
 
     #removeIfEmpty(name) {
-        let entry = this.#rtVars[name];
+        let entry = this.#values.get(name);
         if (!(entry instanceof RtVar)) {
             return false;
         }
@@ -17,38 +21,38 @@ export default class RtVars {
             return false;
         }
         entry.dispose();
-        this.#rtVars[name] = undefined;
+        this.#values.delete(name);
         return true;
     };
 
     #register(name, value) {
         const entry = new RtVar(this, name, value);
-        this.#rtVars[name] = entry;
+        this.#values.set(name, entry);
         return entry;
     };
 
     reg(name, value = undefined) {
-        if (this.#rtVars[name] instanceof RtVar) {
+        if (this.#values.has(name)) {
             console.error("registery exist", this, name, value);
-            return this.#rtVars[name];
+            return this.#values.get(name);
         }
         return this.#register(name, value);
     };
 
     unreg(name) {
-        if (this.#rtVars[name] instanceof RtVar) {
-            this.#rtVars[name].dispose();
+        if (this.#values.has(name)) {
+            this.#values.get(name).dispose();
         }
-        this.#rtVars[name] = undefined;
+        this.#values.delete(name);
     };
 
     getVal(name) {
-        return this.#rtVars[name].value ?? undefined;
+        return this.#values.get(name).value ?? undefined;
     };
 
     setVal(name, val) {
-        if (this.#rtVars[name] instanceof RtVar) {
-            this.#rtVars[name].value = val;
+        if (this.#values.has(name)) {
+            this.#values.get(name).value = val;
             this.#removeIfEmpty(name);
         } else if (undefined !== val) {
             this.#register(name, val);
@@ -56,29 +60,29 @@ export default class RtVars {
     };
 
     on(name, event, listener) {
-        if (!(this.#rtVars[name] instanceof RtVar)) {
+        if (!(this.#values.has(name))) {
             this.#register(name, undefined);
         }
-        this.#rtVars[name].onListen(event, listener);
+        this.#values.get(name).onListen(event, listener);
     };
 
     off(name, event, listener) {
-        if (!(this.#rtVars[name] instanceof RtVar)) {
+        if (!(this.#values.has(name))) {
             return;
         }
-        this.#rtVars[name].offListen(event, listener);
+        this.#values.get(name).offListen(event, listener);
         if ("change" === event) {
             this.#removeIfEmpty(name);
         }
     };
 
     dispose() {
-        for (const [key, value] of Object.entries(this.#rtVars)) {
+        for (const [key, value] of this.#values) {
             if (value instanceof RtVar) {
                 value.dispose();
             }
         }
-        this.#rtVars=new Map();
+        this.#values.clear();
     };
 
 };

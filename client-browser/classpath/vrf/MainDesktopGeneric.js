@@ -1,14 +1,19 @@
 
 import * as THREE from 'three';
-
 import Stats from 'three/addons/libs/stats.module.js';
 import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
 import { ImprovedNoise } from 'three/addons/math/ImprovedNoise.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+import { AnaglyphEffect } from 'three/addons/effects/AnaglyphEffect.js';
+
 import RtVars from './util/RtVars.js';
 import * as Util from "./util/Util.js";
 
 export class MainDesktopGeneric {
+
+    get EngineLibrary() {
+        return THREE;
+    };
 
     calcScreenRelativePosition(event) {// get screen input pixel pos
         const rect = this.renderer_domElement.getBoundingClientRect();
@@ -67,8 +72,12 @@ export class MainDesktopGeneric {
         }
         if (this.renderer_handleResize) {
             const size = this.constructor.calcDomElementSize(this.container);
-            this.renderer.setSize(size.width, size.height);
             this.renderer.setPixelRatio(size.ratio);
+            if (this.anaglyph instanceof AnaglyphEffect) {
+                this.anaglyph.setSize(size.width, size.height);
+            } else {
+                this.renderer.setSize(size.width, size.height);
+            }
             this.renderer_handleResize = false;
         }
         if (this.camera_updateProjectionMatrix) {
@@ -83,7 +92,12 @@ export class MainDesktopGeneric {
 
         {
             this.controls.update(this.clock.getDelta());
-            this.renderer.render(this.scene, this.camera);
+            if (this.anaglyph instanceof AnaglyphEffect) {
+                this.anaglyph.render(this.scene, this.camera);
+            } else {
+                this.renderer.render(this.scene, this.camera);
+            }
+
 
             this.stats.update();
         }
@@ -124,7 +138,9 @@ export class MainDesktopGeneric {
     scene = undefined;
     renderer = undefined;// actual window drawer
     renderer_handleResize = false;
-    renderer_domElement=undefined;
+    renderer_domElement = undefined;
+
+    anaglyph = undefined;
 
     worldWidth = 128;
     worldDepth = 128;
@@ -132,19 +148,22 @@ export class MainDesktopGeneric {
     worldHalfDepth = this.worldDepth / 2;
     data = [];
 
-
     fini() {
 
-        if (this.webxrSession instanceof XRSession) {
+        if ((typeof XRSession != "undefined") && (this.webxrSession instanceof XRSession)) {
             this.tryFiniWebXR();
+        }
+        if (this.anaglyph != undefined) {
+        this.anaglyph.dispose();
+        this.anaglyph = undefined;
         }
         this.stats = undefined;
         this.controls.dispose();
         this.controls = undefined;
         this.renderer.dispose();
         this.renderer = undefined;
-        this.renderer_domElement=undefined;
-        
+        this.renderer_domElement = undefined;
+
         this.scene = undefined;
         this.camera = undefined;
         this.containerResizeListener.unobserve(this.container);
@@ -236,6 +255,7 @@ export class MainDesktopGeneric {
         this.rtVar.reg("renderer.xr", false);
         this.rtVar.reg("camera.frustum.near", 1);
         this.rtVar.reg("camera.frustum.far", 32768);
+        this.rtVar.reg("renderer.anaglyph", false);
 
 
         this.rtVar.on("renderer.fps", "change", this.onAnimateFpsChange);
@@ -276,7 +296,7 @@ export class MainDesktopGeneric {
         this.renderer.setPixelRatio(containerSize.ratio);// window
         this.renderer.setSize(containerSize.width, containerSize.height);
         this.renderer.setAnimationLoop(this.animate);
-        this.renderer_domElement=this.renderer.domElement;
+        this.renderer_domElement = this.renderer.domElement;
         this.container.appendChild(this.renderer_domElement);
 
         this.onAnimateFpsChange();
@@ -293,6 +313,18 @@ export class MainDesktopGeneric {
         this.controls.movementSpeed = 1000;
         this.controls.lookSpeed = 0.125;
         this.controls.lookVertical = true;
+
+        this.rtVar.on("renderer.anaglyph", "change", ((ev) => {
+            if (ev.new && (!(this.anaglyph instanceof AnaglyphEffect))) {
+                // enable anaglyph
+                const size = this.constructor.calcDomElementSize(this.container);
+                this.anaglyph = new AnaglyphEffect(this.renderer, size.width, size.height);
+            } else if (this.anaglyph instanceof AnaglyphEffect) {
+                // disable anaglyph
+        this.anaglyph.dispose();
+        this.anaglyph = undefined;
+            }
+        }).bind(this));
 
         this.stats = new Stats();
         this.container.appendChild(this.stats.dom);
