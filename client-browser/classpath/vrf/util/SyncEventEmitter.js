@@ -1,21 +1,15 @@
+import AbstractEventEmitter from "./AbstractEventEmitter.js";
 
-export default class SyncEventEmitter {
-    events = {};// string => function[]
+export default class SyncEventEmitter extends AbstractEventEmitter{
     constructor() {
-        this.on = this.on.bind(this);
+        super();
         this.emit = this.emit.bind(this);
-        this.off = this.off.bind(this);
-    }
-    on(event, listener) {
-        if (!Array.isArray(this.events[event])) {
-            this.events[event] = [];
+    };
+    async emit(event, args) {
+        const listeners = this.getListenersByName(event);
+        if ((!Array.isArray(listeners)) || listeners.length === 0) {
+            return;
         }
-        this.events[event].push(listener);
-    }
-    emit(event, args) {
-        this.events[event]?.forEach(listener => listener(args));
-    }
-    off(event, listener) {
-        this.events[event] = this.events[event]?.filter(l => l !== listener);
-    }
+        listeners.forEach(listener => listener(args));
+    };
 };

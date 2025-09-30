@@ -1,22 +1,18 @@
+import AbstractEventEmitter from "./AbstractEventEmitter.js";
 
-export default class AsyncEventEmitter {
-    events = {};
+export default class AsyncEventEmitter extends AbstractEventEmitter{
     constructor() {
-        this.on = this.on.bind(this);
+        super();
         this.emit = this.emit.bind(this);
-        this.off = this.off.bind(this);
-    }
-    on(event, listener) {
-        if (!Array.isArray(this.events[event])) {
-            this.events[event] = [];
-        }
-        this.events[event].push(listener);
-    }
+    };
     async emit(event, args) {
-        const promises = this.events[event]?.map(listener => listener(args)) || [];
-        await Promise.all(promises);
-    }
-    off(event, listener) {
-        this.events[event] = this.events[event]?.filter(l => l !== listener);
-    }
+        const listeners = this.getListenersByName(event);
+        if ((!Array.isArray(listeners)) || listeners.length === 0) {
+            return;
+        }
+        const promises = listeners.map(listener => listener(args)) || [];
+        if (promises.length > 0) {
+            await Promise.all(promises);
+        }
+    };
 };

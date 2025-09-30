@@ -42,24 +42,28 @@
 
 		let client = new vrf.MainDesktopGeneric();
 
-		window.vrf = {"client":client};
+		window.vrf = {
+			"client": client
+		};
 
-		client.init({
-			container:document.getElementById("container")
-		});
-		
+		{
+			let args = vrf.MainDesktopGeneric.makeDefaultArgs();
+			args.container = document.getElementById("container");
+			client.init(args);
+		}
+
 		// try webxr
-		(async()=>{
-			const has_webxr=await vrf.envHasWebXR();
-			if(!has_webxr){
+		(async () => {
+			const has_webxr = await vrf.envHasWebXR();
+			if (!has_webxr) {
 				return;
 			}
-			const try1=await client.tryInitWebXR();
-			if(try1){
+			const try1 = await client.tryInitWebXR();
+			if (try1) {
 				return;
 			}
-			const try2=await client.tryInitWebXR();
-			if(try2){
+			const try2 = await client.tryInitWebXR();
+			if (try2) {
 				return;
 			}
 			console.error("webxr seems support but unable to launch");

@@ -8,11 +8,18 @@ import { AnaglyphEffect } from 'three/addons/effects/AnaglyphEffect.js';
 
 import RtVars from './util/RtVars.js';
 import * as Util from "./util/Util.js";
+import SyncEventEmitter from './util/SyncEventEmitter.js';
+import LoaderPool from './assets/LoaderPool.js';
 
 export class MainDesktopGeneric {
 
     get EngineLibrary() {
         return THREE;
+    };
+
+    get GLTextureSideMaxPixel() {
+        const gl = this.renderer.getContext();
+        return gl.getParameter(gl.MAX_TEXTURE_SIZE);
     };
 
     calcScreenRelativePosition(event) {// get screen input pixel pos
@@ -116,8 +123,22 @@ export class MainDesktopGeneric {
         }
     };
 
+    /**
+     * @type {void|XRSession}
+     */
     webxrSession = undefined;
+    /**
+     * @type {RtVars}
+     */
     rtVar = undefined;
+    /**
+     * @type {SyncEventEmitter}
+     */
+    eventBus=undefined;
+    /**
+     * @type {LoaderPool}
+     */
+    assetsLoaders=undefined;
 
     /** */
     #animateManual = false;
@@ -153,9 +174,10 @@ export class MainDesktopGeneric {
         if ((typeof XRSession != "undefined") && (this.webxrSession instanceof XRSession)) {
             this.tryFiniWebXR();
         }
+        this.assetsLoaders.abort();
         if (this.anaglyph != undefined) {
-        this.anaglyph.dispose();
-        this.anaglyph = undefined;
+            this.anaglyph.dispose();
+            this.anaglyph = undefined;
         }
         this.stats = undefined;
         this.controls.dispose();
@@ -170,10 +192,13 @@ export class MainDesktopGeneric {
         this.containerResizeListener = undefined;
         this.clock = undefined;
         this.data = undefined;
+        this.assetsLoaders=undefined;
         this.container.innerHTML = '';
         this.container = undefined;
         this.rtVar.dispose();
         this.rtVar = undefined;
+        this.eventBus.clear();
+        this.eventBus=undefined;
     };
 
     tryFiniWebXR() {
@@ -239,15 +264,32 @@ export class MainDesktopGeneric {
     };
 
     /**
-     * 
+     * @return {{
+     * container: void|HTMLDivElement,
+     * renderer: THREE.WebGLRendererParameters
+     * }} args 
+     */
+    static makeDefaultArgs() {
+        return {
+            container: undefined,
+            renderer: {
+                alpha: false,
+                antialias: true,
+            },
+        };
+    };
+
+    /**
      * @param {{
-     * container:HTMLDivElement
+     * container: HTMLDivElement,
+     * renderer: THREE.WebGLRendererParameters
      * }} args 
      */
     init(args) {
         if (!(args.container instanceof HTMLDivElement)) {
             throw new TypeError("args.container not Div");
         }
+        this.eventBus=new SyncEventEmitter();
         this.rtVar = new RtVars();
 
         this.rtVar.reg("camera.fov", 90);
@@ -261,6 +303,7 @@ export class MainDesktopGeneric {
         this.rtVar.on("renderer.fps", "change", this.onAnimateFpsChange);
 
         this.container = args.container;
+        this.assetsLoaders=new LoaderPool("new");
         this.data = this.generateHeight(this.worldWidth, this.worldDepth);
         this.clock = new THREE.Clock();
         this.containerResizeListener = new ResizeObserver(this.onWindowResize);
@@ -292,7 +335,7 @@ export class MainDesktopGeneric {
 
         this.initSubScene();
 
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer = new THREE.WebGLRenderer(args.renderer);
         this.renderer.setPixelRatio(containerSize.ratio);// window
         this.renderer.setSize(containerSize.width, containerSize.height);
         this.renderer.setAnimationLoop(this.animate);
@@ -321,8 +364,8 @@ export class MainDesktopGeneric {
                 this.anaglyph = new AnaglyphEffect(this.renderer, size.width, size.height);
             } else if (this.anaglyph instanceof AnaglyphEffect) {
                 // disable anaglyph
-        this.anaglyph.dispose();
-        this.anaglyph = undefined;
+                this.anaglyph.dispose();
+                this.anaglyph = undefined;
             }
         }).bind(this));
 
@@ -418,7 +461,7 @@ export class MainDesktopGeneric {
         const geometry = BufferGeometryUtils.mergeGeometries(geometries);
         geometry.computeBoundingSphere();
 
-        const texture = new THREE.TextureLoader().load('textures/minecraft/atlas.png');
+        const texture = this.assetsLoaders.getLoader(THREE.TextureLoader).load('textures/minecraft/atlas.png');
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.magFilter = THREE.NearestFilter;
 
