@@ -82,7 +82,8 @@ export default class LoaderPool {
         if (typeof this.#configure == "function") {
             this.#configure(loader, true);
         }
-        return this.#loaders.set(loaderType, loader);
+        this.#loaders.set(loaderType, loader);
+        return loader;
     };
 
     abort() {
