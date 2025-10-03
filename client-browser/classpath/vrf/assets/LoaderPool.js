@@ -75,6 +75,12 @@ export default class LoaderPool {
      * @returns {THREE.Loader}
      */
     getLoader(loaderType) {
+        if (typeof loaderType == "string") {
+            if (typeof THREE[loaderType] != "function") {
+                throw new TypeError("not a function: ",loaderType);
+            }
+            loaderType = THREE[loaderType];
+        }
         if (this.#loaders.has(loaderType)) {
             return this.#loaders.get(loaderType);
         }

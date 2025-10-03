@@ -34,6 +34,8 @@ export class MainDesktopGeneric {
         this.camera_updateProjectionMatrix = true;
         this.renderer_handleResize = true;
         this.controls_handleResize = true;
+
+        this.eventBus.emit("renderer.resize",{});
     };
 
     generateHeight(width, height) {
@@ -134,11 +136,11 @@ export class MainDesktopGeneric {
     /**
      * @type {SyncEventEmitter}
      */
-    eventBus=undefined;
+    eventBus = undefined;
     /**
      * @type {LoaderPool}
      */
-    assetsLoaders=undefined;
+    assetsLoaders = undefined;
 
     /** */
     #animateManual = false;
@@ -192,13 +194,14 @@ export class MainDesktopGeneric {
         this.containerResizeListener = undefined;
         this.clock = undefined;
         this.data = undefined;
-        this.assetsLoaders=undefined;
+        this.assetsLoaders = undefined;
+        this.container.removeEventListener("fullscreenchange", this.onFullScreenChange);
         this.container.innerHTML = '';
         this.container = undefined;
         this.rtVar.dispose();
         this.rtVar = undefined;
         this.eventBus.clear();
-        this.eventBus=undefined;
+        this.eventBus = undefined;
     };
 
     tryFiniWebXR() {
@@ -261,6 +264,7 @@ export class MainDesktopGeneric {
         this.tryInitWebXR = this.tryInitWebXR.bind(this);
         this.tryFiniWebXR = this.tryFiniWebXR.bind(this);
         this.onFiniWebXR = this.onFiniWebXR.bind(this);
+        this.onFullScreenChange = this.onFullScreenChange.bind(this);
     };
 
     /**
@@ -279,6 +283,28 @@ export class MainDesktopGeneric {
         };
     };
 
+    async tryFullScreenEnter() {
+        if (this.isFullScreenActive()) {
+            return;
+        }
+        await this.container.requestFullscreen({ navigationUI: "hide" });
+    };
+
+    isFullScreenActive() {
+        return document.fullscreenElement === this.container;
+    };
+
+    onFullScreenChange() {
+        this.rtVar.setVal("renderer.fullscreen", this.isFullScreenActive());
+    };
+
+    async tryFullScreenExit() {
+        if (!this.isFullScreenActive()) {
+            return;
+        }
+        await document.exitFullscreen();
+    };
+
     /**
      * @param {{
      * container: HTMLDivElement,
@@ -289,21 +315,23 @@ export class MainDesktopGeneric {
         if (!(args.container instanceof HTMLDivElement)) {
             throw new TypeError("args.container not Div");
         }
-        this.eventBus=new SyncEventEmitter();
+        this.eventBus = new SyncEventEmitter();
         this.rtVar = new RtVars();
 
         this.rtVar.reg("camera.fov", 90);
         this.rtVar.reg("renderer.fps", 60);
+        this.rtVar.reg("renderer.fullscreen", 60);
         this.rtVar.reg("renderer.xr", false);
         this.rtVar.reg("camera.frustum.near", 1);
         this.rtVar.reg("camera.frustum.far", 32768);
         this.rtVar.reg("renderer.anaglyph", false);
-
+        this.rtVar.reg("debug.render.material.wireframe", false);
 
         this.rtVar.on("renderer.fps", "change", this.onAnimateFpsChange);
 
         this.container = args.container;
-        this.assetsLoaders=new LoaderPool("new");
+        this.container.addEventListener("fullscreenchange", this.onFullScreenChange);
+        this.assetsLoaders = new LoaderPool("new");
         this.data = this.generateHeight(this.worldWidth, this.worldDepth);
         this.clock = new THREE.Clock();
         this.containerResizeListener = new ResizeObserver(this.onWindowResize);
@@ -458,22 +486,37 @@ export class MainDesktopGeneric {
 
         }
 
+        const debugSceneData = {};
         const geometry = BufferGeometryUtils.mergeGeometries(geometries);
         geometry.computeBoundingSphere();
+        debugSceneData.geometry = geometry;
 
         const texture = this.assetsLoaders.getLoader(THREE.TextureLoader).load('textures/minecraft/atlas.png');
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.magFilter = THREE.NearestFilter;
+        debugSceneData.texture = texture;
 
-        const mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({ map: texture, side: THREE.FrontSide }));
+        const material = new THREE.MeshLambertMaterial({ map: texture, side: THREE.FrontSide });
+        debugSceneData.material = material;
+        this.rtVar.on("debug.render.material.wireframe", "change", ((material, ev) => {
+            material.wireframe = ev.new;
+            material.needsUpdate = true;
+        }).bind(this, material));
+
+        const mesh = new THREE.Mesh(geometry, material);
         this.scene.add(mesh);
+        debugSceneData.mesh = mesh;
 
-        const ambientLight = new THREE.AmbientLight(0xeeeeee, 3);
+        const ambientLight = new THREE.AmbientLight(0xeeeeee, 1);
         this.scene.add(ambientLight);
+        debugSceneData.ambientLight = ambientLight;
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 12);
-        directionalLight.position.set(1, 1, 0.5).normalize();
+        directionalLight.position.set(1, 1, 1).normalize();
         this.scene.add(directionalLight);
+        debugSceneData.directionalLight = directionalLight;
+
+        this.debugSceneData = debugSceneData;
     };
 
 };
