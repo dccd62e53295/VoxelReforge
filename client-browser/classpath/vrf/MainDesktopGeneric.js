@@ -8,7 +8,6 @@ import { AnaglyphEffect } from 'three/addons/effects/AnaglyphEffect.js';
 
 import RtVars from './util/RtVars.js';
 import * as Util from "./util/Util.js";
-import SyncEventEmitter from './util/SyncEventEmitter.js';
 import LoaderPool from './assets/LoaderPool.js';
 
 export class MainDesktopGeneric {
@@ -35,7 +34,7 @@ export class MainDesktopGeneric {
         this.renderer_handleResize = true;
         this.controls_handleResize = true;
 
-        this.eventBus.emit("renderer.resize",{});
+        this.rtVar.v("renderer.resize").emit({});
     };
 
     generateHeight(width, height) {
@@ -134,10 +133,6 @@ export class MainDesktopGeneric {
      */
     rtVar = undefined;
     /**
-     * @type {SyncEventEmitter}
-     */
-    eventBus = undefined;
-    /**
      * @type {LoaderPool}
      */
     assetsLoaders = undefined;
@@ -200,8 +195,6 @@ export class MainDesktopGeneric {
         this.container = undefined;
         this.rtVar.dispose();
         this.rtVar = undefined;
-        this.eventBus.clear();
-        this.eventBus = undefined;
     };
 
     tryFiniWebXR() {
@@ -247,7 +240,7 @@ export class MainDesktopGeneric {
     };
 
     onAnimateFpsChange(ev) {
-        const fps = ev?.new ?? this.rtVar.getVal("renderer.fps");
+        const fps = ev?.new ?? this.rtVar.v("renderer.fps").value;
         if (fps < 1 || fps > 1000) {
             this.#animateManual = false;
             this.#animatePeriod = 1000;// disabled
@@ -295,7 +288,7 @@ export class MainDesktopGeneric {
     };
 
     onFullScreenChange() {
-        this.rtVar.setVal("renderer.fullscreen", this.isFullScreenActive());
+        this.rtVar.v("renderer.fullscreen").value=this.isFullScreenActive();
     };
 
     async tryFullScreenExit() {
@@ -315,19 +308,19 @@ export class MainDesktopGeneric {
         if (!(args.container instanceof HTMLDivElement)) {
             throw new TypeError("args.container not Div");
         }
-        this.eventBus = new SyncEventEmitter();
         this.rtVar = new RtVars();
 
-        this.rtVar.reg("camera.fov", 90);
-        this.rtVar.reg("renderer.fps", 60);
-        this.rtVar.reg("renderer.fullscreen", 60);
-        this.rtVar.reg("renderer.xr", false);
-        this.rtVar.reg("camera.frustum.near", 1);
-        this.rtVar.reg("camera.frustum.far", 32768);
-        this.rtVar.reg("renderer.anaglyph", false);
-        this.rtVar.reg("debug.render.material.wireframe", false);
+        this.rtVar.reg("renderer.resize","ev");
+        this.rtVar.reg("camera.fov","tran", 90);
+        this.rtVar.reg("renderer.fps","var", 60);
+        this.rtVar.reg("renderer.fullscreen","var", 60);
+        this.rtVar.reg("renderer.xr","var", false);
+        this.rtVar.reg("camera.frustum.near","var", 1);
+        this.rtVar.reg("camera.frustum.far","var", 32768);
+        this.rtVar.reg("renderer.anaglyph","var", false);
+        this.rtVar.reg("debug.render.material.wireframe","var", false);
 
-        this.rtVar.on("renderer.fps", "change", this.onAnimateFpsChange);
+        this.rtVar.v("renderer.fps").on("change", this.onAnimateFpsChange);
 
         this.container = args.container;
         this.container.addEventListener("fullscreenchange", this.onFullScreenChange);
@@ -338,20 +331,20 @@ export class MainDesktopGeneric {
         this.containerResizeListener.observe(this.container);
         const containerSize = this.constructor.calcDomElementSize(this.container);
         this.camera = new THREE.PerspectiveCamera(
-            this.rtVar.getVal("camera.fov"),
+            this.rtVar.v("camera.fov").value,
             containerSize.aspect,
-            this.rtVar.getVal("camera.frustum.near"),
-            this.rtVar.getVal("camera.frustum.far")
+            this.rtVar.v("camera.frustum.near").value,
+            this.rtVar.v("camera.frustum.far").value
         );
-        this.rtVar.on("camera.fov", "change", ((ev) => {
+        this.rtVar.v("camera.fov").on("change", ((ev) => {
             this.camera.fov = ev.new;
             this.camera_updateProjectionMatrix = true;
         }).bind(this));
-        this.rtVar.on("camera.frustum.near", "change", ((ev) => {
+        this.rtVar.v("camera.frustum.near").on("change", ((ev) => {
             this.camera.near = ev.new;
             this.camera_updateProjectionMatrix = true;
         }).bind(this));
-        this.rtVar.on("camera.frustum.far", "change", ((ev) => {
+        this.rtVar.v("camera.frustum.far").on("change", ((ev) => {
             this.camera.far = ev.new;
             this.camera_updateProjectionMatrix = true;
         }).bind(this));
@@ -373,10 +366,10 @@ export class MainDesktopGeneric {
         this.onAnimateFpsChange();
 
         this.renderer.xr.addEventListener('sessionstart', (() => {
-            this.rtVar.setVal("renderer.xr", true);
+            this.rtVar.v("renderer.xr").value=true;
         }).bind(this));
         this.renderer.xr.addEventListener('sessionend', (() => {
-            this.rtVar.setVal("renderer.xr", false);
+            this.rtVar.v("renderer.xr").value=false;
         }).bind(this));
 
         this.controls = new FirstPersonControls(this.camera, this.renderer_domElement);
@@ -385,7 +378,7 @@ export class MainDesktopGeneric {
         this.controls.lookSpeed = 0.125;
         this.controls.lookVertical = true;
 
-        this.rtVar.on("renderer.anaglyph", "change", ((ev) => {
+        this.rtVar.v("renderer.anaglyph").on("change", ((ev) => {
             if (ev.new && (!(this.anaglyph instanceof AnaglyphEffect))) {
                 // enable anaglyph
                 const size = this.constructor.calcDomElementSize(this.container);
@@ -498,7 +491,7 @@ export class MainDesktopGeneric {
 
         const material = new THREE.MeshLambertMaterial({ map: texture, side: THREE.FrontSide });
         debugSceneData.material = material;
-        this.rtVar.on("debug.render.material.wireframe", "change", ((material, ev) => {
+        this.rtVar.v("debug.render.material.wireframe").on("change", ((material, ev) => {
             material.wireframe = ev.new;
             material.needsUpdate = true;
         }).bind(this, material));

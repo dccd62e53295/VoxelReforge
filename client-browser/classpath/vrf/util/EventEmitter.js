@@ -1,20 +1,13 @@
 
-export default class AbstractEventEmitter {
+export default class EventEmitter {
     /**
-     * @type {Map<string,((args:any)=>void|Promise<void>)[]>}
+     * @type {{[K in string]:((args:any)=>void|Promise<void>)[]}}
      */
-    events = new Map();
-    constructor() {
+    events = {};
+    constructor(_ = undefined) {
         this.on = this.on.bind(this);
         this.off = this.off.bind(this);
-    };
-    /**
-     * 
-     * @param {string} name 
-     * @returns {((args:any)=>void|Promise<void>)[]}
-     */
-    getListenersByName(name) {
-        return this.events.get(name);
+        this.emit = this.emit.bind(this);
     };
     /**
      * @param {string} event 
@@ -25,10 +18,10 @@ export default class AbstractEventEmitter {
         if (typeof listener != "function") {
             return;
         }
-        let listeners = this.events.get(event);
+        let listeners = this.events[event];
         if (!Array.isArray(listeners)) {
             listeners = [];
-            this.events.set(event, listeners);
+            this.events[event] = listeners;
         }
         if (listeners.indexOf(listener) !== - 1) {
             return;
@@ -41,7 +34,19 @@ export default class AbstractEventEmitter {
      * @param {any} args 
      * @returns {void|Promise<void>}
      */
-    emit(event, args) { throw new EvalError("AbstractEventEmitter.emit not implement"); };
+    emit(event, args) {
+        const listeners = this.events[event];
+        if ((!Array.isArray(listeners)) || listeners.length === 0) {
+            return;
+        }
+        const result = listeners
+            .map(listener => listener(args))
+            .filter(result => result instanceof Promise);
+
+        if (result.length > 0) {
+            return Promise.all(result);
+        }
+    };
     /**
      * @param {string} event 
      * @param {(args:any)=>void|Promise<void>} listener 
@@ -51,7 +56,7 @@ export default class AbstractEventEmitter {
         if (typeof listener != "function") {
             return;
         }
-        let listeners = this.events.get(event);
+        let listeners = this.events[event];
         if ((!Array.isArray(listeners)) || listeners.length === 0) {
             return;
         }
@@ -61,12 +66,12 @@ export default class AbstractEventEmitter {
         }
         listeners.splice(index, 1);
         if (listeners.length === 0) {
-            this.events.delete(event);
+            delete this.events[event];
         }
     };
 
-    clear() {
-        this.events.clear();
+    dispose() {
+        this.events = {};
     };
 
 };

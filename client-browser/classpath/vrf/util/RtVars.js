@@ -1,88 +1,75 @@
 
-import RtVar from "./RtVar.js";
+import SimpleEventEmitter from "./SimpleEventEmitter.js";
+import EventEmitter from "./EventEmitter.js";
+import MutableVariable from "./MutableVariable.js";
+import TransitVariable from "./TransitVariable.js";
 
 export default class RtVars {
-    /**
-     * [ string => RtVar ]
-     */
-    /** @type {Map<string,RtVar>} */
-    #values = new Map();
+    /** @type {{[K in string]:MutableVariable}} */
+    #values = {};
 
     get values() {
         return this.#values;
     };
 
-    #removeIfEmpty(name) {
-        let entry = this.#values.get(name);
-        if (!(entry instanceof RtVar)) {
-            return false;
+    #register(name, type, value=undefined) {
+        if (typeof type == "string") {
+            switch (type) {
+                case 1:
+                case "e":
+                case "ev":
+                case "event":
+                    type = SimpleEventEmitter;
+                    break;
+                case 2:
+                case "em":
+                    type = EventEmitter;
+                    break;
+                case 3:
+                case "v":
+                case "var":
+                case "variable":
+                    type = MutableVariable;
+                    break;
+                case 4:
+                case "t":
+                case "tran":
+                case "transit":
+                    type = TransitVariable;// TODO
+                    break;
+                default:
+                    throw new TypeError("invalid type: " + type);
+            }
         }
-        if (!entry.isPureEmpty()) {
-            return false;
-        }
-        entry.dispose();
-        this.#values.delete(name);
-        return true;
-    };
-
-    #register(name, value) {
-        const entry = new RtVar(this, name, value);
-        this.#values.set(name, entry);
+        const entry = new type(value);
+        this.#values[name] = entry;
         return entry;
     };
 
-    reg(name, value = undefined) {
-        if (this.#values.has(name)) {
+    reg(name, type, value = undefined) {
+        if (undefined!==this.#values[name]) {
             console.error("registery exist", this, name, value);
-            return this.#values.get(name);
+            return this.#values[name];
         }
-        return this.#register(name, value);
+        return this.#register(name, type, value);
     };
 
     unreg(name) {
-        if (this.#values.has(name)) {
-            this.#values.get(name).dispose();
+        if (undefined!==this.#values[name]) {
+            this.#values[name].dispose();
         }
-        this.#values.delete(name);
+        delete this.#values[name];
     };
 
-    getVal(name) {
-        return this.#values.get(name).value ?? undefined;
-    };
-
-    setVal(name, val) {
-        if (this.#values.has(name)) {
-            this.#values.get(name).value = val;
-            this.#removeIfEmpty(name);
-        } else if (undefined !== val) {
-            this.#register(name, val);
-        }
-    };
-
-    on(name, event, listener) {
-        if (!(this.#values.has(name))) {
-            this.#register(name, undefined);
-        }
-        this.#values.get(name).onListen(event, listener);
-    };
-
-    off(name, event, listener) {
-        if (!(this.#values.has(name))) {
-            return;
-        }
-        this.#values.get(name).offListen(event, listener);
-        if ("change" === event) {
-            this.#removeIfEmpty(name);
-        }
+    v(name) {
+        return this.#values[name] ?? undefined;
     };
 
     dispose() {
-        for (const [key, value] of this.#values) {
-            if (value instanceof RtVar) {
-                value.dispose();
-            }
+        for (const [k, v] of Object.entries(this.#values)) {
+            v.dispose();
         }
-        this.#values.clear();
+        this.#values = {};
     };
 
 };
