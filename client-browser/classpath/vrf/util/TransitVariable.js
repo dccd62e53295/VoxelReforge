@@ -25,6 +25,10 @@ export default class TransitVariable extends MutableVariable {
         }
         this.#interval = -1;
         this.#schedule = undefined;
+        this.emit("transit_end",{
+            event:"transit_end",
+            new:this.value
+        });
     };
 
     onRun() {
@@ -45,6 +49,14 @@ export default class TransitVariable extends MutableVariable {
         this.#schedule = schedule;
         this.#interval = interval;
         this.#taskid = setInterval(this.onRun, this.#interval);
+        this.emit("transit_start",{
+            event:"transit_start",
+            transit:{
+                callback:this.#schedule,
+                interval:this.#interval
+            },
+            old:this.value
+        });
     };
 
     dispose() {

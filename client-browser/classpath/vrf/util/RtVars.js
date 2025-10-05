@@ -5,7 +5,7 @@ import MutableVariable from "./MutableVariable.js";
 import TransitVariable from "./TransitVariable.js";
 
 export default class RtVars {
-    /** @type {{[K in string]:MutableVariable}} */
+    /** @type {{[K in string]:(EventEmitter|SimpleEventEmitter|object)}} */
     #values = {};
 
     get values() {
@@ -35,7 +35,7 @@ export default class RtVars {
                 case "t":
                 case "tran":
                 case "transit":
-                    type = TransitVariable;// TODO
+                    type = TransitVariable;
                     break;
                 default:
                     throw new TypeError("invalid type: " + type);

@@ -5,6 +5,10 @@ export default class MutableVariable extends EventEmitter {
     #disposeEventName = "dispose";
     #value = undefined;
 
+    valueEquals=(owner,vold,vnew)=>{
+        return vold===vnew;
+    };
+
     constructor(val = undefined) {
         super(val);
         this.#value = val;
@@ -13,17 +17,16 @@ export default class MutableVariable extends EventEmitter {
      * @param {any} val
      */
     set value(val = undefined) {
-        if (val === this.#value) {
+        if (this.valueEquals(this,this.#value,val)) {
             return;
         }
         const eventObj = {
             event:"change",
             old: this.#value,
-            new: val,
-            entry: this
+            new: val
         };
         this.#value = val;
-        this.emit(eventObj);
+        this.emit("change",eventObj);
     };
 
     get value() {
@@ -33,8 +36,7 @@ export default class MutableVariable extends EventEmitter {
     dispose() {
         this.emit(this.#disposeEventName, {
             event:"dispose",
-            old: this.#value,
-            entry: this
+            old: this.#value
         });
         super.dispose();
     };

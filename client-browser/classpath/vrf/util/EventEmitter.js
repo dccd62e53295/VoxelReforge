@@ -35,10 +35,14 @@ export default class EventEmitter {
      * @returns {void|Promise<void>}
      */
     emit(event, args) {
+        if(typeof event!=="string"){
+            throw new TypeError("emit event type must string");
+        }
         const listeners = this.events[event];
         if ((!Array.isArray(listeners)) || listeners.length === 0) {
             return;
         }
+        args.by=this;
         const result = listeners
             .map(listener => listener(args))
             .filter(result => result instanceof Promise);
