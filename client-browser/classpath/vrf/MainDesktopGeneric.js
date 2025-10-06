@@ -37,38 +37,6 @@ export class MainDesktopGeneric {
         this.rtVar.v("renderer.resize").emit({});
     };
 
-    generateHeight(width, height) {
-
-        const data = [], perlin = new ImprovedNoise(),
-            size = width * height, z = Math.random() * 100;
-
-        let quality = 2;
-
-        for (let i = 0; i < size; i++) data[i] = 0;
-
-        for (let j = 0; j < 4; j++) {
-
-            for (let i = 0; i < size; i++) {
-
-                const x = i % width, y = (i / width) | 0;
-                data[i] += perlin.noise(x / quality, y / quality, z) * quality;
-
-            }
-
-            quality *= 4;
-
-        }
-
-        return data;
-
-    };
-
-    getY(x, z) {
-
-        return (this.data[x + z * this.worldWidth] * 0.15) | 0;
-
-    };
-
     animate(timestamp) {
         if (this.#animateManual) {
             this.#animateSaveTime += timestamp - this.#animateLastTime;
@@ -78,6 +46,7 @@ export class MainDesktopGeneric {
             }
             this.#animateSaveTime %= this.#animatePeriod;
         }
+        this.rtVar.animate(timestamp);
         if (this.renderer_handleResize) {
             const size = this.constructor.calcDomElementSize(this.container);
             this.renderer.setPixelRatio(size.ratio);
@@ -105,8 +74,6 @@ export class MainDesktopGeneric {
             } else {
                 this.renderer.render(this.scene, this.camera);
             }
-
-
             this.stats.update();
         }
     };
@@ -157,14 +124,7 @@ export class MainDesktopGeneric {
     renderer = undefined;// actual window drawer
     renderer_handleResize = false;
     renderer_domElement = undefined;
-
     anaglyph = undefined;
-
-    worldWidth = 128;
-    worldDepth = 128;
-    worldHalfWidth = this.worldWidth / 2;
-    worldHalfDepth = this.worldDepth / 2;
-    data = [];
 
     fini() {
 
@@ -394,6 +354,19 @@ export class MainDesktopGeneric {
         this.container.appendChild(this.stats.dom);
     };
 
+/** exmaple terrain */
+    worldWidth = 128;
+    worldDepth = 128;
+    worldHalfWidth = this.worldWidth / 2;
+    worldHalfDepth = this.worldDepth / 2;
+    data = [];
+
+    getY(x, z) {
+
+        return (this.data[x + z * this.worldWidth] * 0.15) | 0;
+
+    };
+
     initSubScene() {
         this.scene = new THREE.Scene();// @return
         this.scene.background = new THREE.Color(0xbfd1e5);// @mapping(world_background) @inject
@@ -510,6 +483,32 @@ export class MainDesktopGeneric {
         debugSceneData.directionalLight = directionalLight;
 
         this.debugSceneData = debugSceneData;
+    };
+
+    generateHeight(width, height) {
+
+        const data = [], perlin = new ImprovedNoise(),
+            size = width * height, z = Math.random() * 100;
+
+        let quality = 2;
+
+        for (let i = 0; i < size; i++) data[i] = 0;
+
+        for (let j = 0; j < 4; j++) {
+
+            for (let i = 0; i < size; i++) {
+
+                const x = i % width, y = (i / width) | 0;
+                data[i] += perlin.noise(x / quality, y / quality, z) * quality;
+
+            }
+
+            quality *= 4;
+
+        }
+
+        return data;
+
     };
 
 };

@@ -7,12 +7,15 @@ import TransitVariable from "./TransitVariable.js";
 export default class RtVars {
     /** @type {{[K in string]:(EventEmitter|SimpleEventEmitter|object)}} */
     #values = {};
+    /** @type {Set<TransitVariable>} */
+    #tickables = new Set();
+
 
     get values() {
         return this.#values;
     };
 
-    #register(name, type, value=undefined) {
+    #register(name, type, value = undefined) {
         if (typeof type == "string") {
             switch (type) {
                 case 1:
@@ -43,11 +46,14 @@ export default class RtVars {
         }
         const entry = new type(value);
         this.#values[name] = entry;
+        if ("animate" in entry) {
+            this.#tickables.add(entry);
+        }
         return entry;
     };
 
     reg(name, type, value = undefined) {
-        if (undefined!==this.#values[name]) {
+        if (undefined !== this.#values[name]) {
             console.error("registery exist", this, name, value);
             return this.#values[name];
         }
@@ -55,9 +61,11 @@ export default class RtVars {
     };
 
     unreg(name) {
-        if (undefined!==this.#values[name]) {
-            this.#values[name].dispose();
+        const entry = this.#values[name];
+        if (undefined !== entry) {
+            entry.dispose();
         }
+        this.#tickables.delete(entry);
         delete this.#values[name];
     };
 
@@ -66,10 +74,17 @@ export default class RtVars {
     };
 
     dispose() {
+        this.#tickables.clear();
         for (const [k, v] of Object.entries(this.#values)) {
             v.dispose();
         }
         this.#values = {};
+    };
+
+    animate(i) {
+        for (const entry of this.#tickables) {
+            entry.animate(i);
+        }
     };
 
 };

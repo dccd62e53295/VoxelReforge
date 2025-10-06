@@ -3,64 +3,58 @@ import MutableVariable from "./MutableVariable.js";
 
 export default class TransitVariable extends MutableVariable {
     /**
-     * @type {(vars:TransitVariable,val:any)=>any}
+     * @type {(vars:TransitVariable,number,val:any)=>{next:any,end:boolean}}
      */
     #schedule = undefined;
-    #interval = -1;// frequency in ms
-    #taskid = -1;// setInterval task id
 
     constructor(val = undefined) {
         super(val);
-        this.onRun = this.onRun.bind(this);
+        this.onRun = this.animate.bind(this);
     };
 
-    hasSchedule() {
-        return -1 !== this.#taskid;
-    };
-
-    cancelSchedule() {
-        if (-1 !== this.#taskid) {
-            clearInterval(this.#taskid);
-            this.#taskid = -1;
+    /**
+     * @type {void|((TransitVariable,number,any)=>{next:any,end:boolean})} schedule
+     */
+    set schedule(schedule) {
+        if (undefined !== this.#schedule) {
+            this.#cancelSchedule();
         }
-        this.#interval = -1;
-        this.#schedule = undefined;
-        this.emit("transit_end",{
-            event:"transit_end",
-            new:this.value
-        });
-    };
-
-    onRun() {
-        if (undefined === this.#schedule) {
-            this.cancelSchedule();
+        if (undefined === schedule) {
             return;
         }
-        super.value = this.#schedule(this, super.value);
+        this.#schedule = schedule;
+        this.emit("transit_start", {
+            event: "transit_start",
+            transit: this.#schedule,
+            old: this.value
+        });
     };
 
-    setSchedule(schedule, interval) {
-        if (interval < 1) {
-            throw new TypeError("invalid interval: " + interval);
-        }
-        if (-1 !== this.#taskid) {
-            this.cancelSchedule();
-        }
-        this.#schedule = schedule;
-        this.#interval = interval;
-        this.#taskid = setInterval(this.onRun, this.#interval);
-        this.emit("transit_start",{
-            event:"transit_start",
-            transit:{
-                callback:this.#schedule,
-                interval:this.#interval
-            },
-            old:this.value
+    get schedule() {
+        return this.#schedule;
+    };
+
+    #cancelSchedule() {
+        this.#schedule = undefined;
+        this.emit("transit_end", {
+            event: "transit_end",
+            new: this.value
         });
+    };
+
+    animate(i) {
+        if (typeof this.#schedule !== "function") {
+            return;
+        }
+        const j = this.#schedule(this, i, this.value);
+        this.value = j.next;
+        if (j.end) {
+            this.#cancelSchedule();
+        }
     };
 
     dispose() {
-        this.cancelSchedule();
+        this.#cancelSchedule();
         super.dispose();
     };
 };
