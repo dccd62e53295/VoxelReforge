@@ -37,6 +37,6 @@ export const host_is_little_endian = (() => {
     return new Int16Array(buffer)[0] === 256;
 })();
 
-export const str_may_hex = `^(?:[a-fA-F0-9]{2})+$`;
-export const str_may_base64url = `^[a-zA-Z0-9_-]+$`;
-export const str_may_base64 = `^[A-Za-z0-9+/]+={0,2}$`;
+export const str_may_hex = /^(?:[a-fA-F0-9]{2})+$/;
+export const str_may_base64url = /^[a-zA-Z0-9_-]+$/;
+export const str_may_base64 = /^[A-Za-z0-9+/]+={0,2}$/;
