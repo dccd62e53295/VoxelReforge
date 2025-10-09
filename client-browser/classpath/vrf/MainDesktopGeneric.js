@@ -275,8 +275,8 @@ export class MainDesktopGeneric {
         this.rtVar.reg("renderer.fps","var", 60);
         this.rtVar.reg("renderer.fullscreen","var", 60);
         this.rtVar.reg("renderer.xr","var", false);
-        this.rtVar.reg("camera.frustum.near","var", 1);
-        this.rtVar.reg("camera.frustum.far","var", 32768);
+        this.rtVar.reg("camera.frustum.near","var", 1/16);
+        this.rtVar.reg("camera.frustum.far","var", 1024);// 16*64
         this.rtVar.reg("renderer.anaglyph","var", false);
         this.rtVar.reg("debug.render.material.wireframe","var", false);
 
@@ -312,7 +312,7 @@ export class MainDesktopGeneric {
 
 
 
-        this.camera.position.y = this.getY(this.worldHalfWidth, this.worldHalfDepth) * 100 + 100;
+        this.camera.position.y = this.getY(this.worldHalfWidth, this.worldHalfDepth) + 1;
 
         this.initSubScene();
 
@@ -334,7 +334,7 @@ export class MainDesktopGeneric {
 
         this.controls = new FirstPersonControls(this.camera, this.renderer_domElement);
 
-        this.controls.movementSpeed = 1000;
+        this.controls.movementSpeed = 10;
         this.controls.lookSpeed = 0.125;
         this.controls.lookVertical = true;
 
@@ -371,34 +371,34 @@ export class MainDesktopGeneric {
         this.scene = new THREE.Scene();// @return
         this.scene.background = new THREE.Color(0xbfd1e5);// @mapping(world_background) @inject
 
-        const pxGeometry = new THREE.PlaneGeometry(100, 100);
+        const pxGeometry = new THREE.PlaneGeometry(1, 1);
         pxGeometry.attributes.uv.array[1] = 0.5;
         pxGeometry.attributes.uv.array[3] = 0.5;
         pxGeometry.rotateY(Math.PI / 2);
-        pxGeometry.translate(50, 0, 0);
+        pxGeometry.translate(0.5, 0, 0);
 
-        const nxGeometry = new THREE.PlaneGeometry(100, 100);
+        const nxGeometry = new THREE.PlaneGeometry(1, 1);
         nxGeometry.attributes.uv.array[1] = 0.5;
         nxGeometry.attributes.uv.array[3] = 0.5;
         nxGeometry.rotateY(- Math.PI / 2);
-        nxGeometry.translate(- 50, 0, 0);
+        nxGeometry.translate(- 0.5, 0, 0);
 
-        const pyGeometry = new THREE.PlaneGeometry(100, 100);
+        const pyGeometry = new THREE.PlaneGeometry(1, 1);
         pyGeometry.attributes.uv.array[5] = 0.5;
         pyGeometry.attributes.uv.array[7] = 0.5;
         pyGeometry.rotateX(- Math.PI / 2);
-        pyGeometry.translate(0, 50, 0);
+        pyGeometry.translate(0, 0.5, 0);
 
-        const pzGeometry = new THREE.PlaneGeometry(100, 100);
+        const pzGeometry = new THREE.PlaneGeometry(1, 1);
         pzGeometry.attributes.uv.array[1] = 0.5;
         pzGeometry.attributes.uv.array[3] = 0.5;
-        pzGeometry.translate(0, 0, 50);
+        pzGeometry.translate(0, 0, 0.5);
 
-        const nzGeometry = new THREE.PlaneGeometry(100, 100);
+        const nzGeometry = new THREE.PlaneGeometry(1, 1);
         nzGeometry.attributes.uv.array[1] = 0.5;
         nzGeometry.attributes.uv.array[3] = 0.5;
         nzGeometry.rotateY(Math.PI);
-        nzGeometry.translate(0, 0, - 50);
+        nzGeometry.translate(0, 0, - 0.5);
 
         const matrix = new THREE.Matrix4();
 
@@ -412,9 +412,9 @@ export class MainDesktopGeneric {
                 const h = this.getY(x, z);
 
                 matrix.makeTranslation(
-                    x * 100 - this.worldHalfWidth * 100,
-                    h * 100,
-                    z * 100 - this.worldHalfDepth * 100
+                    x - this.worldHalfWidth,
+                    h,
+                    z - this.worldHalfDepth
                 );
 
                 const px = this.getY(x + 1, z);
